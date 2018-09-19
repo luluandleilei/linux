@@ -28,9 +28,14 @@
  *	Our network namespace constructor/destructor lists
  */
 
+//网络协议模块相关的链表，每一个新注册的网络协议模块都会添加到该链表中
+//后面新增的网络命名空间才可以
+//subsystem和device模块相关的链表，每一个新注册的subsystem和device模块都会添加到该链表中
+//前面一部分为subsystem部分，后面一部分为device部分，first_device指向device部分的第一个device
 static LIST_HEAD(pernet_list);
 static struct list_head *first_device = &pernet_list;
 
+//网络命名空间相关的链表，每一个新注册的网络命名空间都会添加到该链表中
 LIST_HEAD(net_namespace_list);
 EXPORT_SYMBOL_GPL(net_namespace_list);
 
@@ -44,6 +49,7 @@ struct net init_net = {
 };
 EXPORT_SYMBOL(init_net);
 
+//表示当前init_net是否已经被初始化
 static bool init_net_initialized;
 /*
  * pernet_ops_rwsem: protects: pernet_list, net_generic_ids,
@@ -115,6 +121,7 @@ static int ops_init(const struct pernet_operations *ops, struct net *net)
 	int err = -ENOMEM;
 	void *data = NULL;
 
+	//(1)分配ops->size大小私有空间，记录到net->gen->ptr[ops->id]上
 	if (ops->id && ops->size) {
 		data = kzalloc(ops->size, GFP_KERNEL);
 		if (!data)
@@ -124,6 +131,7 @@ static int ops_init(const struct pernet_operations *ops, struct net *net)
 		if (err)
 			goto cleanup;
 	}
+	//(2)调用ops->init函数
 	err = 0;
 	if (ops->init)
 		err = ops->init(net);
@@ -929,7 +937,7 @@ static int __register_pernet_operations(struct list_head *list,
 {
 	struct net *net;
 	int error;
-	LIST_HEAD(net_exit_list);
+	LIST_HEAD(net_exit_list);	//记录需要回滚的网络命名空间net
 
 	list_add_tail(&ops->list, list);
 	if (ops->init || (ops->id && ops->size)) {
@@ -971,6 +979,8 @@ static void __unregister_pernet_operations(struct pernet_operations *ops)
 static int __register_pernet_operations(struct list_head *list,
 					struct pernet_operations *ops)
 {
+	//init_net网络命名空间还未被初始化，将其记录到pernet_list列表中
+	//在稍后init_net网络命名空间初始化后会执行对应的ops的初始工作
 	if (!init_net_initialized) {
 		list_add_tail(&ops->list, list);
 		return 0;
@@ -1001,17 +1011,20 @@ static int register_pernet_operations(struct list_head *list,
 	int error;
 
 	if (ops->id) {
+		//分配ops->id
 		error = ida_alloc_min(&net_generic_ids, MIN_PERNET_OPS_ID,
 				GFP_KERNEL);
 		if (error < 0)
 			return error;
 		*ops->id = error;
+		//更新max_gen_ptrs
 		max_gen_ptrs = max(max_gen_ptrs, *ops->id + 1);
 	}
 	error = __register_pernet_operations(list, ops);
 	if (error) {
 		rcu_barrier();
 		if (ops->id)
+			//释放ops->id
 			ida_free(&net_generic_ids, *ops->id);
 	}
 

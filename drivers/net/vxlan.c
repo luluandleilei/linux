@@ -64,8 +64,8 @@ static void vxlan_vs_del_dev(struct vxlan_dev *vxlan);
 
 /* per-network namespace private data for this module */
 struct vxlan_net {
-	struct list_head  vxlan_list;
-	struct hlist_head sock_list[PORT_HASH_SIZE];
+	struct list_head  vxlan_list;					//list of struct vxlan_dev
+	struct hlist_head sock_list[PORT_HASH_SIZE];	//table of struct vxlan_sock 
 	spinlock_t	  sock_lock;
 };
 
