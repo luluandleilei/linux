@@ -2214,8 +2214,7 @@ void dev_set_promiscuity(struct net_device *dev, int inc)
 	if (dev->flags != old_flags) {
 		dev_mc_upload(dev);
 		printk(KERN_INFO "device %s %s promiscuous mode\n",
-		       dev->name, (dev->flags & IFF_PROMISC) ? "entered" :
-		       					       "left");
+		       dev->name, (dev->flags & IFF_PROMISC) ? "entered" : "left");
 		audit_log(current->audit_context, GFP_ATOMIC,
 			AUDIT_ANOM_PROMISCUOUS,
 			"dev=%s prom=%d old_prom=%d auid=%u",

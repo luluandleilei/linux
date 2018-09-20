@@ -263,8 +263,9 @@ struct net_device
 	//This is the first field of the "visible" part of this structure
 	//(i.e. as seen by users in the "Space.c" file).  It is the name
 	//the interface.
-	char			name[IFNAMSIZ];
-	// device name hash chain 
+	char				name[IFNAMSIZ];
+	//device name hash chain 
+	//Link the net_device structure to the bucket's list of device name tables
 	struct hlist_node	name_hlist;
 
 	/*
@@ -289,6 +290,13 @@ struct net_device
 	 */
 
 	//The type of port being used for this interface.
+	//Some devices come with more than one connector (the most common 
+	//combination is BNC + RJ45) and allow the user to select one of them depending
+	//on her needs. When the device driver is not forced by configuration commands 
+	//to select a specific port type, it simply chooses a default one. There are 
+	//also cases where a single device driver can handle different interface models;
+	//in those situations, the interface can discover the port type to use by simply 
+	//trying all of them in a specific order.
 	unsigned char		if_port;	/* Selectable AUI, TP,..*/
 	//The DMA channel used by the device (if any). 
 	//To obtain and release a DMA channel from the kernel, the file kernel/dma.c
@@ -300,8 +308,14 @@ struct net_device
 	//DMA is not available for all devices because some buses don't use it.
 	unsigned char		dma;		/* DMA channel		*/
 
+	//A set of flags used by the network queuing subsystem. They are indexed by the 
+	//constants in the enum netdev_state_t, which is defined in include/linux/netdevice.h 
+	//and defines constants such as _ _LINK_STATE_XOFF for each bit. 
+	//Individual bits are set and cleared using the general functions set_bit and
+	//clear_bit, usually invoked through a wrapper that hides the details of the bit used.
 	unsigned long		state;
 
+	//Links each net_device data structure to the next in the global list.
 	struct net_device	*next;
 	
 	/* The device initialization function. Called only once. */
@@ -332,6 +346,7 @@ struct net_device
 #define NETIF_F_LLTX		4096	/* LockLess TX */
 #define NETIF_F_UFO             8192    /* Can offload UDP Large Send*/
 
+	//Used by one of the software interrupts 
 	struct net_device	*next_sched;
 
 	//Interface index. Unique device identifier	
@@ -342,15 +357,18 @@ struct net_device
 	int			iflink;
 
 
+	//These two methods are used to collect statistics. get_stats operates on a normal device and get_wireless_stats on a wireless device. 
 	struct net_device_stats* (*get_stats)(struct net_device *dev);
 	struct iw_statistics*	(*get_wireless_stats)(struct net_device *dev);
 
+	//wireless_handlers, wireless_data -- Additional parameters and function pointers used by wireless devices.
 	/* List of functions to handle Wireless Extensions (instead of ioctl).
 	 * See <net/iw_handler.h> for details. Jean II */
-	const struct iw_handler_def *	wireless_handlers;
+	const struct iw_handler_def		*wireless_handlers;
 	/* Instance data managed by the core of Wireless Extensions. */
-	struct iw_public_data *	wireless_data;
+	struct iw_public_data 			*wireless_data;
 
+	//Pointer to a set of function pointers used to set or get the configuration of different device parameters.
 	struct ethtool_ops *ethtool_ops;
 
 	/*
@@ -389,9 +407,16 @@ struct net_device
 	//for instance, ETH_HLEN is defined in <include/linux/if_ether.h>.
 	unsigned short		hard_header_len;	/* hardware hdr length	*/
 
-	struct net_device	*master; /* Pointer to master device of a group,
-					  * which this device is member of.
-					  */
+	//Pointer to master device of a group, which this device is member of.
+	//Some protocols exist that allow a set of devices to be grouped together 
+	//and be treated as a single device. These protocols include EQL (Equalizer 
+	//Load-balancer for serial network interfaces), Bonding (also called 
+	//EtherChannel and trunking), and the TEQL (true equalizer) queuing discipline
+	//of Traffic Control. One of the devices in the group is elected to be 
+	//the so-called master, which plays a special role. This field is a pointer
+	//to the net_device data structure of the master device of the group. If the
+	//interface is not a member of such a group, the pointer is simply NULL.
+	struct net_device	*master; 
 
 	/* Interface address info. */
 	unsigned char		perm_addr[MAX_ADDR_LEN]; /* permanent hw address */
@@ -404,37 +429,69 @@ struct net_device
 	//See comments in net/ipv6/addrconf.c.
 	unsigned short          dev_id;		/* for shared network cards */
 
+	//Pointer to the head of this device's list of dev_mc_list structures
+	//Each device keeps an instance of the dev_mc_list structure for each link layer multicast
+	//address it listens to. Link layer multicast addresses can be added and removed with the 
+	//functions dev_mc_add and dev_mc_delete, respectively.
 	struct dev_mc_list	*mc_list;	/* Multicast mac addresses	*/
-	int			mc_count;	/* Number of installed mcasts	*/
+	//The number of multicast addresses for this device, which is also the length of the
+	//list to which mc_list points.
+	int					 mc_count;	/* Number of installed mcasts	*/
+	
+	//A device that receives all packets is said to be in promiscuous mode .
+	//it is a counter rather than a simple flag is that several clients may ask
+	//for promiscuous mode; therefore, each increments the counter when entering 
+	//the mode and decrements the counter when leaving the mode. The device does 
+	//not leave promiscuous mode until the counter reaches zero. Usually the 
+	//field is manipulated by calling the function dev_set_promiscuity. Whenever
+	//promiscuity is nonzero, the IFF_PROMISC bit flag of flags is also set.
+	//set
 	int			promiscuity;
+	//When nonzero, causes the device to listen to all multicast addresses. 
+	//Like promiscuity, allmulti is a reference count rather than a simple Boolean. 
+	//This is because multiple facilities (VLANs and bonding devices, for instance) may 
+	//independently require listening to all addresses. When the variable goes from 0 to 
+	//nonzero, the function dev_set_allmulti is called to instruct the interface to listen
+	//to all multicast addresses. The opposite happens when allmulti goes to 0.
+	//One of the flags in the net_device data structure indicates whether the device should
+	//listen to all addresses. The decision about when to set or clear this flag is controlled
+	//by the all_multi field shown in this section.
 	int			allmulti;
 
 
 	/* Protocol specific pointers */
-	
-	void 			*atalk_ptr;	/* AppleTalk link 	*/
-	void			*ip_ptr;	/* IPv4 specific data	*/  
-	void                    *dn_ptr;        /* DECnet specific data */
-	void                    *ip6_ptr;       /* IPv6 specific data */
-	void			*ec_ptr;	/* Econet specific data	*/
-	void			*ax25_ptr;	/* AX.25 specific data */
+
+	//These six fields are pointers to data structures specific to particular protocols,
+	//each data structure containing parameters that are used privately by that protocol. 
+	//ip_ptr, for instance, points to a data structure of type in_device (even though it 
+	//is declared as void *) that contains different IPv4-related parameters, among them 
+	//the list of IP addresses configured on the interface.
+	//Most of the time only one of these fields is in use.
+	void 			*atalk_ptr;		/* AppleTalk link 	*/
+	void			*ip_ptr;		/* IPv4 specific data	*/  
+	void            *dn_ptr;        /* DECnet specific data */
+	void            *ip6_ptr;       /* IPv6 specific data */
+	void			*ec_ptr;		/* Econet specific data	*/
+	void			*ax25_ptr;		/* AX.25 specific data */
 
 /*
  * Cache line mostly used on receive path (including eth_type_trans())
  */
-	struct list_head	poll_list ____cacheline_aligned_in_smp;
-					/* Link to poll list	*/
+ 	//poll_list, poll, quota, weight -- Used by the NAPI feature
+	struct list_head	poll_list ____cacheline_aligned_in_smp; /* Link to poll list	*/
 
 	int			(*poll) (struct net_device *dev, int *quota);
 	int			quota;
 	int			weight;
+	
+	//The time (measured in jiffies) when the last packet was received. 
+	//At the moment, it is not used for any specific purpose, but is available in case of need.
 	unsigned long		last_rx;	/* Time of last Rx	*/
 	/* Interface address info used in eth_type_trans() */
 	//dev_addr is the device link layer address.
 	//The address's length in octets is given by addr_len. The value of addr_len
 	//depends on the type of device. Ethernet addresses are 6 octets long.
-	unsigned char		dev_addr[MAX_ADDR_LEN];	/* hw address, (before bcast 
-							because most packets are unicast) */
+	unsigned char		dev_addr[MAX_ADDR_LEN];	/* hw address, (before bcast because most packets are unicast) */
 
 	//The link layer broadcast address.
 	unsigned char		broadcast[MAX_ADDR_LEN];	/* hw bcast add	*/
@@ -443,46 +500,73 @@ struct net_device
  * Cache line mostly used on queue transmit path (qdisc)
  */
 	/* device queue lock */
+	//queue_lock, ingress_lock -- 
+	//	The Traffic Control subsystem defines a private egress queue for each network device. 
+	//queue_lock is used to avoid simultaneous accesses to it. 
+	//ingress_lock does the same for ingress traffic.
 	spinlock_t		queue_lock ____cacheline_aligned_in_smp;
+	//qdisc, qdisc_sleeping, qdisc_ingress, qdisc_list --
+	//	These fields are used to manage the ingress and egress packet queues and access to the 
+	//device from different CPUs.
 	struct Qdisc		*qdisc;
 	struct Qdisc		*qdisc_sleeping;
 	struct list_head	qdisc_list;
+	//The length of the device's transmission queue. 
+	//When Traffic Control support is present in the kernel, tx_queue_len may not be used 
+	//(only a few queuing discipline use it). Its value can be tuned with the sysfs filesystem 
+	//(see the /sys/class/net/device_name/ directories).
+	//Depending on the queuing disciplinethe strategy used to queue incoming and outgoing 
+	//packetsin use, tx_queue_len may or may not be used. It is usually used when the queue
+	//type is FIFO (First In, First Out) or something else relatively simple.
 	unsigned long		tx_queue_len;	/* Max frames per queue allowed */
 
 	/* ingress path synchronizer */
-	spinlock_t		ingress_lock;
+	spinlock_t			ingress_lock;
 	struct Qdisc		*qdisc_ingress;
 
 /*
  * One part is mostly used on xmit path (device)
  */
 	/* hard_start_xmit synchronizer */
+	//The xmit_lock lock is used to serialize accesses to the driver function hard_start_xmit.
+	//This means that each CPU can carry out only one transmission at a time on any given device.
+	//xmit_lock_owner is the ID of the CPU that holds the lock. 
+	//It is always 0 on single-processor systems and -1 when the lock is not taken on SMP systems.
+	//It is possible to have lockless transmissions, too, when the device driver supports it.
 	spinlock_t		xmit_lock ____cacheline_aligned_in_smp;
-	/* cpu id of processor entered to hard_start_xmit or -1,
-	   if nobody entered there.
-	 */
+	//cpu id of processor entered to hard_start_xmit or -1, if nobody entered there.
 	int			xmit_lock_owner;
 	void			*priv;	/* pointer to private data	*/
-	int			(*hard_start_xmit) (struct sk_buff *skb,
-						    struct net_device *dev);
+	//Used to transmit a frame.
+	int			(*hard_start_xmit) (struct sk_buff *skb, struct net_device *dev);
 	/* These may be needed for future network-power-down code. */
+	//The time (measured in jiffies) when the last frame transmission started.
+	//The device driver sets it just before starting transmission. The field is
+	//used to detect problems with the card if it does not finish transmission 
+	//after a given amount of time. An overly long transmission means there is 
+	//something wrong; in that case, the driver usually resets the card.
 	unsigned long		trans_start;	/* Time (in jiffies) of last Tx	*/
 
-	int			watchdog_timeo; /* used by dev_watchdog() */
+	//Along with the tx_timeout variable discussed earlier, these fields implement the Watchdog timer 
+	int					watchdog_timeo; /* used by dev_watchdog() */
 	struct timer_list	watchdog_timer;
 
 /*
  * refcnt is a very hot point, so align it on SMP
  */
 	/* Number of references to this device */
+	//Reference count. The device cannot be unregistered until this counter has gone to zero 
 	atomic_t		refcnt ____cacheline_aligned_in_smp;
 
 	/* delayed register/unregister */
+	//The registration and unregistration of a network device is done in two steps. todo_list is used to handle the second one.
 	struct list_head	todo_list;
-	/* device index hash chain */
+	//device index hash chain 
+	//Link the net_device structure to the bucket's list of device index tables
 	struct hlist_node	index_hlist;
 
-	/* register/unregister state machine */
+	//register/unregister state machine 
+	//The registration state of the device.
 	enum { NETREG_UNINITIALIZED=0,
 	       NETREG_REGISTERED,	/* completed register_netdevice */
 	       NETREG_UNREGISTERING,	/* called unregister_netdevice */
@@ -499,62 +583,77 @@ struct net_device
 	int			(*open)(struct net_device *dev);
 	int			(*stop)(struct net_device *dev);
 #define HAVE_NETDEV_POLL
-	int			(*hard_header) (struct sk_buff *skb,
-						struct net_device *dev,
-						unsigned short type,
-						void *daddr,
-						void *saddr,
-						unsigned len);
+	int			(*hard_header) (struct sk_buff *skb, struct net_device *dev, unsigned short type, void *daddr, void *saddr, unsigned len);
 	int			(*rebuild_header)(struct sk_buff *skb);
-#define HAVE_MULTICAST			 
-	void			(*set_multicast_list)(struct net_device *dev);
-#define HAVE_SET_MAC_ADDR  		 
-	int			(*set_mac_address)(struct net_device *dev,
-						   void *addr);
+#define HAVE_MULTICAST		
+	//This method is used to ask the device driver to configure the device to listen to those addresses.
+	//Usually it is not called directly, but through wrappers such as dev_mc_upload or its lockless version,
+	//_ _dev_mc_upload. When a device cannot install a list of multicast addresses, it simply enables all of them.
+	void		(*set_multicast_list)(struct net_device *dev);
+#define HAVE_SET_MAC_ADDR  	
+	//Changes the device MAC address. When the device does not provide this capability (as in the case of Bridge
+	//virtual devices), it is set to NULL
+	int			(*set_mac_address)(struct net_device *dev, void *addr);
 #define HAVE_PRIVATE_IOCTL
-	int			(*do_ioctl)(struct net_device *dev,
-					    struct ifreq *ifr, int cmd);
+	//ioctl is the system call used to issue commands to devices. 
+	//This method is called to process some of the ioctl commands 
+	int			(*do_ioctl)(struct net_device *dev, struct ifreq *ifr, int cmd);
 #define HAVE_SET_CONFIG
-	int			(*set_config)(struct net_device *dev,
-					      struct ifmap *map);
+	//Configures driver parameters, such as the hardware parameters irq, io_addr, and if_port. 
+	//Higher-layer parameters (such as protocol addresses) are handled by do_ioctl.
+	//Not many devices use this method, especially among the new devices that are better able to implement probe functions.
+	//A good example with some documentation can be found in sis900_set_config in drivers/net/sis900.c.
+	int			(*set_config)(struct net_device *dev, struct ifmap *map);
 #define HAVE_HEADER_CACHE
-	int			(*hard_header_cache)(struct neighbour *neigh,
-						     struct hh_cache *hh);
-	void			(*header_cache_update)(struct hh_cache *hh,
-						       struct net_device *dev,
-						       unsigned char *  haddr);
+	int			(*hard_header_cache)(struct neighbour *neigh, struct hh_cache *hh);
+	void		(*header_cache_update)(struct hh_cache *hh, struct net_device *dev, unsigned char *  haddr);
 #define HAVE_CHANGE_MTU
+	//Changes the device MTU.
+	//Changing this field has no effect on the device driver but simply forces the kernel 
+	//software to respect the new MTU and to handle fragmentation accordingly
 	int			(*change_mtu)(struct net_device *dev, int new_mtu);
 
 #define HAVE_TX_TIMEOUT
+	//The method invoked at the expiration of the watchdog timer, which determines whether a
+	//transmission is taking a suspiciously long time to complete. The watchdog timer is not 
+	//even started unless this method is defined.
 	void			(*tx_timeout) (struct net_device *dev);
 
-	void			(*vlan_rx_register)(struct net_device *dev,
-						    struct vlan_group *grp);
-	void			(*vlan_rx_add_vid)(struct net_device *dev,
-						   unsigned short vid);
-	void			(*vlan_rx_kill_vid)(struct net_device *dev,
-						    unsigned short vid);
+	//These three function pointers are used by the VLAN code to register a device as VLAN 
+	//tagging capable (see net/8021q/vlan.c), add a VLAN to the device, and delete the VLAN
+	//from the device, respectively
+	void			(*vlan_rx_register)(struct net_device *dev, struct vlan_group *grp);
+	void			(*vlan_rx_add_vid)(struct net_device *dev, unsigned short vid);
+	void			(*vlan_rx_kill_vid)(struct net_device *dev, unsigned short vid);
 
-	int			(*hard_header_parse)(struct sk_buff *skb,
-						     unsigned char *haddr);
+	int			(*hard_header_parse)(struct sk_buff *skb, unsigned char *haddr);
 	int			(*neigh_setup)(struct net_device *dev, struct neigh_parms *);
 #ifdef CONFIG_NETPOLL
+	//Used by the optional Netpoll feature 
 	struct netpoll_info	*npinfo;
 #endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
+	//Used by the optional Netpoll feature 
 	void                    (*poll_controller)(struct net_device *dev);
 #endif
 
 	/* bridge stuff */
+	//Extra information needed when the device is configured as a bridged port.
 	struct net_bridge_port	*br_port;
 
 #ifdef CONFIG_NET_DIVERT
-	/* this will get initialized at each interface type init routine */
+	
+	//Diverter is a feature that allows you to change the source and destination addresses of
+	//the incoming packet. This makes it possible to reroute traffic with specific characteristics 
+	//specified by the configuration to a different interface or a different host. To work properly
+	//and to make sense, diverter needs other features such as bridging. The data structure pointed 
+	//to by this field stores the parameters needed by the diverter feature.
+	//this will get initialized at each interface type init routine
 	struct divert_blk	*divert;
 #endif /* CONFIG_NET_DIVERT */
 
-	/* class/net/name entry */
+	// class/net/name entry 
+	//Used by the new generic kernel driver infrastructure.
 	struct class_device	class_dev;
 	/* space for optional statistics and wireless sysfs groups */
 	struct attribute_group  *sysfs_groups[3];
