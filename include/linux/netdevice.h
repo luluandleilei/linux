@@ -260,22 +260,27 @@ extern int __init netdev_boot_setup(char *str);
 struct net_device
 {
 
-	/*
-	 * This is the first field of the "visible" part of this structure
-	 * (i.e. as seen by users in the "Space.c" file).  It is the name
-	 * the interface.
-	 */
+	//This is the first field of the "visible" part of this structure
+	//(i.e. as seen by users in the "Space.c" file).  It is the name
+	//the interface.
 	char			name[IFNAMSIZ];
-	/* device name hash chain */
+	// device name hash chain 
 	struct hlist_node	name_hlist;
 
 	/*
 	 *	I/O specific fields
 	 *	FIXME: Merge these and struct ifmap into one
 	 */
+	//mem_end,mem_start -- describe the shared memory used by the device to 
+	//communicate with the kernel. They are initialized and accessed only within
+	//the device driver; higher layers do not need to care about them.
 	unsigned long		mem_end;	/* shared mem end	*/
 	unsigned long		mem_start;	/* shared mem start	*/
+	//The beginning of the I/O memory mapped to the device's own memory.
 	unsigned long		base_addr;	/* device I/O address	*/
+	//The interrupt number used by the device to talk to the kernel. It can be 
+	//shared among multiple devices. Drivers use the request_irq function to 
+	//allocate this variable and free_irq to release it.
 	unsigned int		irq;		/* device IRQ number	*/
 
 	/*
@@ -283,7 +288,16 @@ struct net_device
 	 *	part of the usual set specified in Space.c.
 	 */
 
+	//The type of port being used for this interface.
 	unsigned char		if_port;	/* Selectable AUI, TP,..*/
+	//The DMA channel used by the device (if any). 
+	//To obtain and release a DMA channel from the kernel, the file kernel/dma.c
+	//defines the functions request_dma and free_dma. To enable or disable a DMA
+	//channel after obtaining it, the functions enable_dma and disable_dma are 
+	//provided in various include/asm-architecture files (e.g., include/asm-i386). 
+	//The routines are used by ISA devices; Peripheral Component Interconnect (PCI) 
+	//devices do not need them because they use others instead.
+	//DMA is not available for all devices because some buses don't use it.
 	unsigned char		dma;		/* DMA channel		*/
 
 	unsigned long		state;
@@ -295,8 +309,15 @@ struct net_device
 
 	/* ------- Fields preinitialized in Space.c finish here ------- */
 
-	/* Net device features */
-	unsigned long		features;
+	//Another bitmap of flags used to store some other device capabilities. 
+	//It is not redundant for this data structure to contain multiple flag 
+	//variables. The features field reports the card's capabilities for 
+	//communicating with the CPU, such as whether the card can do DMA to 
+	//high memory, or checksum all the packets in hardware. The list of the 
+	//possible features is defined inside the structure net_device itself. 
+	//This parameter is initialized by the device driver. You can find the 
+	//list of NETIF_F_XXX features,inside the net_device data structure definition.
+	unsigned long		features; 	/* Net device features */
 #define NETIF_F_SG		1	/* Scatter/gather IO. */
 #define NETIF_F_IP_CSUM		2	/* Can checksum only TCP/UDP over IPv4. */
 #define NETIF_F_NO_CSUM		4	/* Does not require checksum. F.e. loopack. */
@@ -313,8 +334,11 @@ struct net_device
 
 	struct net_device	*next_sched;
 
-	/* Interface index. Unique device identifier	*/
+	//Interface index. Unique device identifier	
+	//A unique ID, assigned to each device when it is registered with a call to dev_new_index
 	int			ifindex;
+	//This field is mainly used by (virtual) tunnel devices and identifies the real device 
+	//that will be used to reach the other end of the tunnel.
 	int			iflink;
 
 
@@ -336,16 +360,33 @@ struct net_device
 	 */
 
 
+	//Some bits in the flags field represent capabilities of the network device 
+	//(such as IFF_MULTICAST) and others represent changing status (such as 
+	//IFF_UP or IFF_RUNNING). 
+	//You can find the complete list of these flags in include/linux/if.h. 
+	//The device driver usually sets the capabilities at initialization time, 
+	//and the status flags are managed by the kernel in response to external events. 
 	unsigned int		flags;	/* interface flags (a la BSD)	*/
+	//gflags is almost never used and is there for compatibility reasons. 
 	unsigned short		gflags;
-        unsigned short          priv_flags; /* Like 'flags' but invisible to userspace. */
+	//priv_flags stores flags that are not visible to the user space. 
+	//Right now this field is used by the VLAN and Bridge virtual devices.
+	unsigned short      priv_flags; /* Like 'flags' but invisible to userspace. */
 	unsigned short		padded;	/* How much padding added by alloc_netdev() */
 
 	unsigned char		operstate; /* RFC2863 operstate */
 	unsigned char		link_mode; /* mapping policy to operstate */
 
-	unsigned		mtu;	/* interface MTU value		*/
+	//MTU stands for Maximum Transmission Unit and it represents the maximum 
+	//size of the frames that the device can handle.
+	unsigned			mtu;	/* interface MTU value		*/
+	//The category of devices to which it belongs (Ethernet, Frame Relay, etc.). 
+	//include/linux/if_arp.h contains the complete list of possible types.
 	unsigned short		type;	/* interface hardware type	*/
+	//The size of the device header in octets. 
+	//The Ethernet header, for instance, is 14 octets long. The length of each 
+	//device header is defined in the header file for that device. For Ethernet,
+	//for instance, ETH_HLEN is defined in <include/linux/if_ether.h>.
 	unsigned short		hard_header_len;	/* hardware hdr length	*/
 
 	struct net_device	*master; /* Pointer to master device of a group,
@@ -354,7 +395,13 @@ struct net_device
 
 	/* Interface address info. */
 	unsigned char		perm_addr[MAX_ADDR_LEN]; /* permanent hw address */
+	//The device link layer address's length in octets. 
+	//It depends on the type of device. Ethernet addresses are 6 octets long.
 	unsigned char		addr_len;	/* hardware address length	*/
+	//Currently used by IPv6 with the zSeries OSA NICs. 
+	//The field is used to differentiate between virtual instances of the same
+	//device that can be shared between different OSes concurrently. 
+	//See comments in net/ipv6/addrconf.c.
 	unsigned short          dev_id;		/* for shared network cards */
 
 	struct dev_mc_list	*mc_list;	/* Multicast mac addresses	*/
@@ -383,9 +430,13 @@ struct net_device
 	int			weight;
 	unsigned long		last_rx;	/* Time of last Rx	*/
 	/* Interface address info used in eth_type_trans() */
+	//dev_addr is the device link layer address.
+	//The address's length in octets is given by addr_len. The value of addr_len
+	//depends on the type of device. Ethernet addresses are 6 octets long.
 	unsigned char		dev_addr[MAX_ADDR_LEN];	/* hw address, (before bcast 
 							because most packets are unicast) */
 
+	//The link layer broadcast address.
 	unsigned char		broadcast[MAX_ADDR_LEN];	/* hw bcast add	*/
 
 /*
