@@ -147,6 +147,7 @@ static void inet6_prefix_notify(int event, struct inet6_dev *idev,
 				struct prefix_info *pinfo);
 static int ipv6_chk_same_addr(const struct in6_addr *addr, struct net_device *dev);
 
+//Sends notifications about the insertion, removal, and change of an Internet Protocol Version 6 (IPv6) address on a local interface.
 static struct notifier_block *inet6addr_chain;
 
 struct ipv6_devconf ipv6_devconf = {

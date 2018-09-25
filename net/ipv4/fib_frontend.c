@@ -660,6 +660,8 @@ void __init ip_fib_init(void)
 	fib_rules_init();
 #endif
 
+	//The routing tables are affected both by changes to locally configured IP addresses 
+	//and by changes to the registration status of local devices.
 	register_netdevice_notifier(&fib_netdev_notifier);
 	register_inetaddr_notifier(&fib_inetaddr_notifier);
 	nl_fib_lookup_init();

@@ -193,6 +193,7 @@ static inline struct hlist_head *dev_index_hash(int ifindex)
  *	Our notifier list
  */
 
+//Sends notifications about the registration status of network devices.
 static struct notifier_block *netdev_chain;
 
 /*

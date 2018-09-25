@@ -81,9 +81,9 @@ static struct ipv4_devconf ipv4_devconf_dflt = {
 
 static void rtmsg_ifa(int event, struct in_ifaddr *);
 
+//Sends notifications about the insertion, removal, and change of an Internet Protocol Version 4 (IPv4) address on a local interface.
 static struct notifier_block *inetaddr_chain;
-static void inet_del_ifa(struct in_device *in_dev, struct in_ifaddr **ifap,
-			 int destroy);
+static void inet_del_ifa(struct in_device *in_dev, struct in_ifaddr **ifap, int destroy);
 #ifdef CONFIG_SYSCTL
 static void devinet_sysctl_register(struct in_device *in_dev,
 				    struct ipv4_devconf *p);
