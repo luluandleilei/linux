@@ -835,9 +835,7 @@ static inline int tcp_prequeue(struct sock *sk, struct sk_buff *skb)
 		} else if (skb_queue_len(&tp->ucopy.prequeue) == 1) {
 			wake_up_interruptible(sk->sk_sleep);
 			if (!inet_csk_ack_scheduled(sk))
-				inet_csk_reset_xmit_timer(sk, ICSK_TIME_DACK,
-						          (3 * TCP_RTO_MIN) / 4,
-							  TCP_RTO_MAX);
+				inet_csk_reset_xmit_timer(sk, ICSK_TIME_DACK, (3 * TCP_RTO_MIN) / 4, TCP_RTO_MAX);
 		}
 		return 1;
 	}

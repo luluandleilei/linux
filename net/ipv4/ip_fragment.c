@@ -679,14 +679,11 @@ static struct sk_buff *ip_frag_reasm(struct ipq *qp, struct net_device *dev)
 	return head;
 
 out_nomem:
- 	LIMIT_NETDEBUG(KERN_ERR "IP: queue_glue: no memory for gluing "
-			      "queue %p\n", qp);
+ 	LIMIT_NETDEBUG(KERN_ERR "IP: queue_glue: no memory for gluing " "queue %p\n", qp);
 	goto out_fail;
 out_oversize:
 	if (net_ratelimit())
-		printk(KERN_INFO
-			"Oversized IP packet from %d.%d.%d.%d.\n",
-			NIPQUAD(qp->saddr));
+		printk(KERN_INFO "Oversized IP packet from %d.%d.%d.%d.\n", NIPQUAD(qp->saddr));
 out_fail:
 	IP_INC_STATS_BH(IPSTATS_MIB_REASMFAILS);
 	return NULL;
@@ -715,8 +712,7 @@ struct sk_buff *ip_defrag(struct sk_buff *skb, u32 user)
 
 		ip_frag_queue(qp, skb);
 
-		if (qp->last_in == (FIRST_IN|LAST_IN) &&
-		    qp->meat == qp->len)
+		if (qp->last_in == (FIRST_IN|LAST_IN) && qp->meat == qp->len)
 			ret = ip_frag_reasm(qp, dev);
 
 		spin_unlock(&qp->lock);

@@ -2129,16 +2129,14 @@ int ip_route_input(struct sk_buff *skb, u32 daddr, u32 saddr,
 
 		rcu_read_lock();
 		if ((in_dev = __in_dev_get_rcu(dev)) != NULL) {
-			int our = ip_check_mc(in_dev, daddr, saddr,
-				skb->nh.iph->protocol);
+			int our = ip_check_mc(in_dev, daddr, saddr, skb->nh.iph->protocol);
 			if (our
 #ifdef CONFIG_IP_MROUTE
 			    || (!LOCAL_MCAST(daddr) && IN_DEV_MFORWARD(in_dev))
 #endif
 			    ) {
 				rcu_read_unlock();
-				return ip_route_input_mc(skb, daddr, saddr,
-							 tos, dev, our);
+				return ip_route_input_mc(skb, daddr, saddr, tos, dev, our);
 			}
 		}
 		rcu_read_unlock();

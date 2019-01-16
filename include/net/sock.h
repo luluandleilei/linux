@@ -856,8 +856,7 @@ static inline int sk_filter(struct sock *sk, struct sk_buff *skb, int needlock)
 		
 		filter = sk->sk_filter;
 		if (filter) {
-			unsigned int pkt_len = sk_run_filter(skb, filter->insns,
-							     filter->len);
+			unsigned int pkt_len = sk_run_filter(skb, filter->insns, filter->len);
 			if (!pkt_len)
 				err = -EPERM;
 			else

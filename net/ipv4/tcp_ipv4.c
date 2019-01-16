@@ -347,8 +347,7 @@ void tcp_v4_err(struct sk_buff *skb, u32 info)
 		return;
 	}
 
-	sk = inet_lookup(&tcp_hashinfo, iph->daddr, th->dest, iph->saddr,
-			 th->source, inet_iif(skb));
+	sk = inet_lookup(&tcp_hashinfo, iph->daddr, th->dest, iph->saddr, th->source, inet_iif(skb));
 	if (!sk) {
 		ICMP_INC_STATS_BH(ICMP_MIB_INERRORS);
 		return;
@@ -635,15 +634,9 @@ static int tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
 	if (skb) {
 		struct tcphdr *th = skb->h.th;
 
-		th->check = tcp_v4_check(th, skb->len,
-					 ireq->loc_addr,
-					 ireq->rmt_addr,
-					 csum_partial((char *)th, skb->len,
-						      skb->csum));
+		th->check = tcp_v4_check(th, skb->len, ireq->loc_addr, ireq->rmt_addr, csum_partial((char *)th, skb->len, skb->csum));
 
-		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
-					    ireq->rmt_addr,
-					    ireq->opt);
+		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr, ireq->rmt_addr, ireq->opt);
 		if (err == NET_XMIT_CN)
 			err = 0;
 	}
@@ -727,8 +720,7 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 #endif
 
 	/* Never answer to SYNs send to broadcast or multicast */
-	if (((struct rtable *)skb->dst)->rt_flags &
-	    (RTCF_BROADCAST | RTCF_MULTICAST))
+	if (((struct rtable *)skb->dst)->rt_flags & (RTCF_BROADCAST | RTCF_MULTICAST))
 		goto drop;
 
 	/* TW buckets are converted to open requests without
@@ -810,8 +802,7 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 		    (peer = rt_get_peer((struct rtable *)dst)) != NULL &&
 		    peer->v4daddr == saddr) {
 			if (xtime.tv_sec < peer->tcp_ts_stamp + TCP_PAWS_MSL &&
-			    (s32)(peer->tcp_ts - req->ts_recent) >
-							TCP_PAWS_WINDOW) {
+			    (s32)(peer->tcp_ts - req->ts_recent) > TCP_PAWS_WINDOW) {
 				NET_INC_STATS_BH(LINUX_MIB_PAWSPASSIVEREJECTED);
 				dst_release(dst);
 				goto drop_and_free;
@@ -830,10 +821,7 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 			 * to destinations, already remembered
 			 * to the moment of synflood.
 			 */
-			LIMIT_NETDEBUG(KERN_DEBUG "TCP: drop open "
-				       "request from %u.%u.%u.%u/%u\n",
-				       NIPQUAD(saddr),
-				       ntohs(skb->h.th->source));
+			LIMIT_NETDEBUG(KERN_DEBUG "TCP: drop open " "request from %u.%u.%u.%u/%u\n", NIPQUAD(saddr), ntohs(skb->h.th->source));
 			dst_release(dst);
 			goto drop_and_free;
 		}
@@ -924,8 +912,7 @@ static struct sock *tcp_v4_hnd_req(struct sock *sk, struct sk_buff *skb)
 	struct sock *nsk;
 	struct request_sock **prev;
 	/* Find possible connection requests. */
-	struct request_sock *req = inet_csk_search_req(sk, &prev, th->source,
-						       iph->saddr, iph->daddr);
+	struct request_sock *req = inet_csk_search_req(sk, &prev, th->source, iph->saddr, iph->daddr);
 	if (req)
 		return tcp_check_req(sk, skb, req, prev);
 
@@ -1034,19 +1021,25 @@ int tcp_v4_rcv(struct sk_buff *skb)
 	struct sock *sk;
 	int ret;
 
+	//如果不是发往本地的数据包，则直接丢弃
 	if (skb->pkt_type != PACKET_HOST)
 		goto discard_it;
 
 	/* Count it even if it's bad */
 	TCP_INC_STATS_BH(TCP_MIB_INSEGS);
 
+	//包长是否大于TCP头的长度
 	if (!pskb_may_pull(skb, sizeof(struct tcphdr)))
 		goto discard_it;
 
+	//取得TCP首部
 	th = skb->h.th;
 
+	//检查TCP首部的长度和TCP首部中的doff字段是否匹配
 	if (th->doff < sizeof(struct tcphdr) / 4)
 		goto bad_packet;
+
+	//检查TCP首部到TCP数据之间的偏移是否越界
 	if (!pskb_may_pull(skb, th->doff * 4))
 		goto discard_it;
 
@@ -1054,22 +1047,18 @@ int tcp_v4_rcv(struct sk_buff *skb)
 	 * Packet length and doff are validated by header prediction,
 	 * provided case of th->doff==0 is eliminated.
 	 * So, we defer the checks. */
-	if ((skb->ip_summed != CHECKSUM_UNNECESSARY &&
-	     tcp_v4_checksum_init(skb)))
+	if ((skb->ip_summed != CHECKSUM_UNNECESSARY && tcp_v4_checksum_init(skb)))
 		goto bad_packet;
 
 	th = skb->h.th;
 	TCP_SKB_CB(skb)->seq = ntohl(th->seq);
-	TCP_SKB_CB(skb)->end_seq = (TCP_SKB_CB(skb)->seq + th->syn + th->fin +
-				    skb->len - th->doff * 4);
+	TCP_SKB_CB(skb)->end_seq = (TCP_SKB_CB(skb)->seq + th->syn + th->fin + skb->len - th->doff * 4);
 	TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
 	TCP_SKB_CB(skb)->when	 = 0;
 	TCP_SKB_CB(skb)->flags	 = skb->nh.iph->tos;
 	TCP_SKB_CB(skb)->sacked	 = 0;
 
-	sk = __inet_lookup(&tcp_hashinfo, skb->nh.iph->saddr, th->source,
-			   skb->nh.iph->daddr, ntohs(th->dest),
-			   inet_iif(skb));
+	sk = __inet_lookup(&tcp_hashinfo, skb->nh.iph->saddr, th->source, skb->nh.iph->daddr, ntohs(th->dest), inet_iif(skb));
 
 	if (!sk)
 		goto no_tcp_socket;
@@ -1078,21 +1067,31 @@ process:
 	if (sk->sk_state == TCP_TIME_WAIT)
 		goto do_time_wait;
 
+	//检查IPSEC规则
 	if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb))
 		goto discard_and_relse;
 	nf_reset(skb);
 
+	//检查BPF规则
 	if (sk_filter(sk, skb, 0))
 		goto discard_and_relse;
 
 	skb->dev = NULL;
 
+	//这里主要是和release_sock函数实现互斥，release_sock中调用了
+	// spin_lock_bh(&sk->sk_lock.slock);
 	bh_lock_sock(sk);
 	ret = 0;
+
+	//查看是否有用户态进程对该sock进行了锁定
+	//如果sock_owned_by_user为真，则sock的状态不能进行更改
 	if (!sock_owned_by_user(sk)) {
+		//进入预备处理队列
 		if (!tcp_prequeue(sk, skb))
 			ret = tcp_v4_do_rcv(sk, skb);
 	} else
+		//如果数据包被用户进程锁定，则数据包进入后备处理队列，并且该进程进入
+		//套接字的后备处理等待队列sk->lock.wq
 		sk_add_backlog(sk, skb);
 	bh_unlock_sock(sk);
 
@@ -1131,8 +1130,7 @@ do_time_wait:
 		inet_twsk_put((struct inet_timewait_sock *) sk);
 		goto discard_it;
 	}
-	switch (tcp_timewait_state_process((struct inet_timewait_sock *)sk,
-					   skb, th)) {
+	switch (tcp_timewait_state_process((struct inet_timewait_sock *)sk, skb, th)) {
 	case TCP_TW_SYN: {
 		struct sock *sk2 = inet_lookup_listener(&tcp_hashinfo,
 							skb->nh.iph->daddr,

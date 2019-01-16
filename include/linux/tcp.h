@@ -116,9 +116,9 @@ enum tcp_ca_state
 
 struct tcp_info
 {
-	__u8	tcpi_state;
-	__u8	tcpi_ca_state;
-	__u8	tcpi_retransmits;
+	__u8	tcpi_state; /* TCP状态 */
+	__u8	tcpi_ca_state; /* TCP拥塞状态 */
+	__u8	tcpi_retransmits; /* 超时重传的次数 */
 	__u8	tcpi_probes;
 	__u8	tcpi_backoff;
 	__u8	tcpi_options;

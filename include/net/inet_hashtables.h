@@ -397,8 +397,7 @@ static inline struct sock *__inet_lookup(struct inet_hashinfo *hashinfo,
 					 const u32 daddr, const u16 hnum,
 					 const int dif)
 {
-	struct sock *sk = __inet_lookup_established(hashinfo, saddr, sport, daddr,
-						    hnum, dif);
+	struct sock *sk = __inet_lookup_established(hashinfo, saddr, sport, daddr, hnum, dif);
 	return sk ? : inet_lookup_listener(hashinfo, daddr, hnum, dif);
 }
 

@@ -148,8 +148,7 @@ int register_blkdev(unsigned int major, const char *name)
 		}
 
 		if (index == 0) {
-			printk("register_blkdev: failed to get major for %s\n",
-			       name);
+			printk("register_blkdev: failed to get major for %s\n", name);
 			ret = -EBUSY;
 			goto out;
 		}
@@ -178,8 +177,7 @@ int register_blkdev(unsigned int major, const char *name)
 		ret = -EBUSY;
 
 	if (ret < 0) {
-		printk("register_blkdev: cannot get major %d for %s\n",
-		       major, name);
+		printk("register_blkdev: cannot get major %d for %s\n", major, name);
 		kfree(p);
 	}
 out:

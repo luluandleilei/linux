@@ -32,10 +32,10 @@ static DECLARE_MUTEX(chrdevs_lock);
 
 static struct char_device_struct {
 	struct char_device_struct *next;
-	unsigned int major;
-	unsigned int baseminor;
-	int minorct;
-	char name[64];
+	unsigned int major;	//主设备号
+	unsigned int baseminor; //起始次设备号
+	int minorct; //次设备号个数
+	char name[64]; //驱动名
 	struct file_operations *fops;
 	struct cdev *cdev;		/* will die */
 } *chrdevs[MAX_PROBE_HASH];
@@ -176,11 +176,9 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 	i = major_to_index(major);
 
 	for (cp = &chrdevs[i]; *cp; cp = &(*cp)->next)
-		if ((*cp)->major > major ||
-		    ((*cp)->major == major && (*cp)->baseminor >= baseminor))
+		if ((*cp)->major > major || ((*cp)->major == major && (*cp)->baseminor >= baseminor)) //按major从小到大排序，major相同时按baseminor从小到大排序
 			break;
-	if (*cp && (*cp)->major == major &&
-	    (*cp)->baseminor < baseminor + minorct) {
+	if (*cp && (*cp)->major == major && (*cp)->baseminor < baseminor + minorct) { //major相同，minor范围有重叠, 没有判断baseminor是否大于前面一个的结尾？
 		ret = -EBUSY;
 		goto out;
 	}
@@ -250,8 +248,7 @@ int alloc_chrdev_region(dev_t *dev, unsigned baseminor, unsigned count,
 	return 0;
 }
 
-int register_chrdev(unsigned int major, const char *name,
-		    struct file_operations *fops)
+int register_chrdev(unsigned int major, const char *name, struct file_operations *fops)
 {
 	struct char_device_struct *cd;
 	struct cdev *cdev;

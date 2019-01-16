@@ -3091,8 +3091,7 @@ int unregister_netdevice(struct net_device *dev)
 		}
 	}
 	if (!d) {
-		printk(KERN_ERR "unregister net_device: '%s' not found\n",
-		       dev->name);
+		printk(KERN_ERR "unregister net_device: '%s' not found\n", dev->name);
 		return -ENODEV;
 	}
 

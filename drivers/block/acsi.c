@@ -1628,8 +1628,7 @@ int acsi_init( void )
 		err = -EBUSY;
 		goto out1;
 	}
-	if (!(acsi_buffer =
-		  (char *)atari_stram_alloc(ACSI_BUFFER_SIZE, "acsi"))) {
+	if (!(acsi_buffer = (char *)atari_stram_alloc(ACSI_BUFFER_SIZE, "acsi"))) {
 		err = -ENOMEM;
 		printk( KERN_ERR "Unable to get ACSI ST-Ram buffer.\n" );
 		goto out2;
