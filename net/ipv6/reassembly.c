@@ -163,9 +163,7 @@ static void ip6_frag_secret_rebuild(unsigned long dummy)
 		struct hlist_node *p, *n;
 
 		hlist_for_each_entry_safe(q, p, n, &ip6_frag_hash[i], list) {
-			unsigned int hval = ip6qhashfn(q->id,
-						       &q->saddr,
-						       &q->daddr);
+			unsigned int hval = ip6qhashfn(q->id, &q->saddr, &q->daddr);
 
 			if (hval != i) {
 				hlist_del(&q->list);

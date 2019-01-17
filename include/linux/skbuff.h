@@ -289,7 +289,7 @@ struct sk_buff {
 
 	/* These elements must be at the end, see alloc_skb() for details.  */
 	unsigned int		truesize;
-	atomic_t		users;
+	atomic_t		users; //保存引用skb_buff的数量
 	unsigned char		*head,
 				*data,
 				*tail,

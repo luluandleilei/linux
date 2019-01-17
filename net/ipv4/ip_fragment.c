@@ -82,19 +82,19 @@ struct ipq {
 	u32		daddr;
 	u16		id;
 	u8		protocol;
-	u8		last_in;
-#define COMPLETE		4
-#define FIRST_IN		2
-#define LAST_IN			1
+	u8		last_in; // 状态标志  
+#define COMPLETE		4  // 数据已经完整  
+#define FIRST_IN		2 // 第一个包到达
+#define LAST_IN			1 // 最后一个包到达  
 
 	struct sk_buff	*fragments;	/* linked list of received fragments	*/
 	int		len;		/* total length of original datagram	*/
-	int		meat;
+	int		meat; //所有碎片实际长度的累加  
 	spinlock_t	lock;
 	atomic_t	refcnt;
 	struct timer_list timer;	/* when will this queue expire?		*/
-	struct timeval	stamp;
-	int             iif;
+	struct timeval	stamp; // 最新一个碎片的时间戳 
+	int             iif; // 数据进入网卡的索引号  
 	unsigned int    rid;
 	struct inet_peer *peer;
 };
@@ -145,8 +145,7 @@ static void ipfrag_secret_rebuild(unsigned long dummy)
 		struct hlist_node *p, *n;
 
 		hlist_for_each_entry_safe(q, p, n, &ipq_hash[i], list) {
-			unsigned int hval = ipqhashfn(q->id, q->saddr,
-						      q->daddr, q->protocol);
+			unsigned int hval = ipqhashfn(q->id, q->saddr, q->daddr, q->protocol);
 
 			if (hval != i) {
 				hlist_del(&q->list);
@@ -263,7 +262,7 @@ static void ip_evictor(void)
 		read_unlock(&ipfrag_lock);
 
 		spin_lock(&qp->lock);
-		if (!(qp->last_in&COMPLETE))
+		if (!(qp->last_in & COMPLETE))
 			ipq_kill(qp);
 		spin_unlock(&qp->lock);
 
@@ -468,8 +467,7 @@ static void ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 	if (qp->last_in & COMPLETE)
 		goto err;
 
-	if (!(IPCB(skb)->flags & IPSKB_FRAG_COMPLETE) &&
-	    unlikely(ip_frag_too_far(qp)) && unlikely(ip_frag_reinit(qp))) {
+	if (!(IPCB(skb)->flags & IPSKB_FRAG_COMPLETE) && unlikely(ip_frag_too_far(qp)) && unlikely(ip_frag_reinit(qp))) {
 		ipq_kill(qp);
 		goto err;
 	}
@@ -488,8 +486,7 @@ static void ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 		/* If we already have some bits beyond end
 		 * or have different end, the segment is corrrupted.
 		 */
-		if (end < qp->len ||
-		    ((qp->last_in & LAST_IN) && end != qp->len))
+		if (end < qp->len || ((qp->last_in & LAST_IN) && end != qp->len))
 			goto err;
 		qp->last_in |= LAST_IN;
 		qp->len = end;
@@ -727,8 +724,7 @@ struct sk_buff *ip_defrag(struct sk_buff *skb, u32 user)
 
 void ipfrag_init(void)
 {
-	ipfrag_hash_rnd = (u32) ((num_physpages ^ (num_physpages>>7)) ^
-				 (jiffies ^ (jiffies >> 6)));
+	ipfrag_hash_rnd = (u32) ((num_physpages ^ (num_physpages>>7)) ^ (jiffies ^ (jiffies >> 6)));
 
 	init_timer(&ipfrag_secret_timer);
 	ipfrag_secret_timer.function = ipfrag_secret_rebuild;
