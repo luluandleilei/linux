@@ -124,10 +124,7 @@ void __init inet_initpeers(void)
 	if (si.totalram <= (8192*1024)/PAGE_SIZE)
 		inet_peer_threshold >>= 2; /* about 128KB */
 
-	peer_cachep = kmem_cache_create("inet_peer_cache",
-			sizeof(struct inet_peer),
-			0, SLAB_HWCACHE_ALIGN,
-			NULL, NULL);
+	peer_cachep = kmem_cache_create("inet_peer_cache", sizeof(struct inet_peer), 0, SLAB_HWCACHE_ALIGN, NULL, NULL);
 
 	if (!peer_cachep)
 		panic("cannot create inet_peer_cache");
